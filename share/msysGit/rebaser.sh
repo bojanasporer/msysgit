@@ -363,9 +363,10 @@ setup () {
 	alias="$(git config --get alias..r)"
 	test -z "$alias" ||
 	test "a$alias" = "a!$this" ||
+	test "a$alias" = "a!sh \"$this\"" ||
 	die "There is already an '.r' alias!"
 
-	git config alias..r "!$this" &&
+	git config alias..r "!sh \"$this\"" &&
 	generate_script > "$git_dir"/REBASER-SCRIPT &&
 	GIT_EDITOR="$(cd "$git_dir" && pwd)/REBASER-EDITOR" &&
 	cat > "$GIT_EDITOR" << EOF &&
