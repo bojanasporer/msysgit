@@ -277,7 +277,13 @@ setup () {
 
 	git config alias..r "!$this" &&
 	generate_script > "$git_dir"/REBASER-SCRIPT &&
-	GIT_EDITOR="\"$this\" edit \"$(git var GIT_EDITOR)\"" &&
+	GIT_EDITOR="$(cd "$git_dir" && pwd)/REBASER-EDITOR" &&
+	cat > "$GIT_EDITOR" << EOF &&
+#!/bin/sh
+
+exec "$this" edit "$(git var GIT_EDITOR)" "\$@"
+EOF
+	GIT_EDITOR="\"$GIT_EDITOR\"" &&
 	GIT_SEQUENCE_EDITOR="$GIT_EDITOR" &&
 	export GIT_EDITOR GIT_SEQUENCE_EDITOR
 }
