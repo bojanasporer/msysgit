@@ -52,6 +52,19 @@ mark () {
 	git update-ref -m "Marking '$1' as rewritten" refs/rewritten/"$1" HEAD
 }
 
+bud () {
+	shorthead="$(git rev-parse --short --verify HEAD)" &&
+	git for-each-ref refs/rewritten/ |
+	grep "^$shorthead" ||
+	die "Refusing to leave unmarked revision $shorthead behind"
+	git reset --hard refs/rewritten/onto
+}
+
+finish () {
+	mark "$@" &&
+	bud
+}
+
 merge () {
 	# parse command-line arguments
 	parents=
@@ -109,6 +122,13 @@ cleanup () {
 	for rewritten
 	do
 		git update-ref -d refs/rewritten/$rewritten
+	done
+	for rewritten in $(git for-each-ref refs/rewritten/ |
+		sed 's/^[^ ]* commit.refs\/rewritten\///')
+	do
+		test onto = "$rewritten" ||
+		merge $rewritten
+		git update-ref -d refs/rewritten/$rewritten
 	done &&
 	git config --unset alias..r
 }
@@ -149,7 +169,7 @@ do
 done
 
 case "$1" in
-edit|mark|merge|start_merging_rebase|cleanup)
+edit|bud|finish|mark|merge|start_merging_rebase|cleanup)
 	command="$1"
 	shift
 	$command "$@"
@@ -227,8 +247,7 @@ EOF
 			# if there is no line, branch from the 'onto' commit
 			if test -z "$line"
 			then
-				subtodo="$(printf '\nexec %s\n%s' \
-					'git reset --hard refs/rewritten/onto' \
+				subtodo="$(printf '\nexec git .r bud\n%s' \
 					"$subtodo")"
 				break
 			fi
@@ -338,6 +357,9 @@ $command $shortsha1 $oneline")"
 
 this="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 setup () {
+	test -z "$(git for-each-ref refs/rewritten/)" ||
+	die "There are still rewritten revisions"
+
 	alias="$(git config --get alias..r)"
 	test -z "$alias" ||
 	test "a$alias" = "a!$this" ||
