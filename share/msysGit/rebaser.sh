@@ -48,6 +48,10 @@ edit () {
 	exec "$GIT_EDITOR" "$@"
 }
 
+mark () {
+	git update-ref -m "Marking '$1' as rewritten" refs/rewritten/"$1" HEAD
+}
+
 merge () {
 	# parse command-line arguments
 	parents=
@@ -129,7 +133,7 @@ do
 done
 
 case "$1" in
-edit|merge|start_merging_rebase|cleanup)
+edit|mark|merge|start_merging_rebase|cleanup)
 	command="$1"
 	shift
 	$command "$@"
@@ -165,7 +169,7 @@ EOF
 		todo="exec git .r start_merging_rebase \"$shorthead\""
 	fi
 	todo="$(printf '%s\n%s\n' "$todo" \
-		"exec git update-ref refs/rewritten/onto HEAD")"
+		"exec git .r mark onto")"
 
 	toberebased=" $(echo "$list" | cut -f 1 -d ' ' | tr '\n' ' ')"
 	handled=
@@ -261,7 +265,7 @@ EOF
 		die "Internal error: could not find $commit in $todo"
 		todo="$(echo "$todo" |
 			sed "${linenumber}a\\
-exec git update-ref refs/rewritten/$commit HEAD")"
+exec git .r mark $commit")"
 	done
 
 	lastline=9999
